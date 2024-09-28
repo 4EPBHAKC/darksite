@@ -225,7 +225,7 @@
 
         // Simulação de tempo de carregamento para fins de UX
         setTimeout(() => {
-            fetch('./dados.json')
+            fetch('https://cdn.jsdelivr.net/gh/4EPBHAKC/darksit@latest/dados.json')
                 .then(response => response.json())
                 .then(data => {
                     removeTypingEffect(); // Remove o efeito de digitação quando os dados forem recebidos
