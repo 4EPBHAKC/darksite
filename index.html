@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificador de Vazamentos</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>Verificador de Credenciais</h1>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input">
+            <input type="text" id="identifierInput" placeholder="Digite o dado a verificar">
+            <button onclick="checkCredentials()">Enviar</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+<style>
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #000000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    .chat-container {
+        width: 100%;
+        max-width: 400px;
+        height: 80vh;
+        display: flex;
+        flex-direction: column;
+        background-color: #000000;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .chat-header {
+        background-color: #000000;
+        padding: 10px;
+        color: white;
+        text-align: center;
+    }
+
+    .chat-messages {
+        flex: 1;
+        padding: 10px;
+        background-color: #000000;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-messages .message {
+        margin-bottom: 10px;
+    }
+
+    .chat-messages .message.sent {
+        align-self: flex-end;
+        background-color: #000000;
+        padding: 10px;
+        border-radius: 8px;
+        max-width: 80%;
+        box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .chat-messages .message.received {
+        align-self: flex-start;
+        background-color: rgb(0, 0, 0);
+        padding: 10px;
+        border-radius: 8px;
+        max-width: 90%;
+        box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+        color: #ffffff;
+        border: 3px solid #25D366;
+    }
+
+    .chat-input {
+        display: flex;
+        background-color: #000000;
+        padding: 10px;
+    }
+
+    .chat-input input {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 20px;
+        outline: none;
+        font-size: 16px;
+        border: 3px solid #20c35a;
+        color: #20c35a;
+        background-color: #000000;
+    }
+
+    .chat-input button {
+        padding: 10px 15px;
+        margin-left: 10px;
+        border: none;
+        border-radius: 50%;
+        background-color: #25D366;
+        color: white;
+        cursor: pointer;
+    }
+
+    .chat-input button:hover {
+        background-color: #20c35a;
+    }
+
+    /* Estilo de carregamento */
+    .loader {
+        border: 40px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 4px solid #3498db;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+<script>
+    function checkCredentials() {
+        const identifierInput = document.getElementById("identifierInput");
+        const identifier = identifierInput.value.trim();
+        const chatMessages = document.getElementById("chatMessages");
+
+        if (!identifier) {
+            displayMessage("Por favor, digite algo.", "received");
+            return;
+        }
+
+        displayMessage(identifier, "sent");
+        identifierInput.value = ''; // Limpa o campo de entrada após enviar a mensagem
+
+        // Exibir um ícone de carregamento enquanto verifica
+        const loader = document.createElement('div');
+        loader.className = 'message received loader';
+        chatMessages.appendChild(loader);
+
+        // Expressões regulares para identificar e-mail e URL (sem o protocolo)
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const urlRegex = /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}([\/\w.-]*)*$/;
+
+        let identifierType = "username";
+
+        if (emailRegex.test(identifier)) {
+            identifierType = "email";
+        } else if (urlRegex.test(identifier)) {
+            identifierType = "site";
+        }
+
+        // Simulação de tempo de carregamento para fins de UX
+        setTimeout(() => {
+            fetch('https://cdn.jsdelivr.net/gh/4EPBHAKC/darksit@latest/dados.json')
+                .then(response => response.json())
+                .then(data => {
+                    loader.remove(); // Remover o loader após a verificação
+
+                    let foundCredentials = [];
+
+                    // Caso seja uma URL, retorna todas as credenciais relacionadas ao domínio
+                    if (identifierType === "site") {
+                        const domain = identifier.replace(/^(https?:\/\/)?(www\.)?/, ''); // Remove 'http://', 'https://' e 'www.'
+                        foundCredentials = data.filter(credential => credential.url.includes(domain));
+                    } else {
+                        // Caso seja um username ou email, retorna a credencial exata
+                        foundCredentials = data.filter(credential => credential.identifier === identifier && credential.type === identifierType);
+                    }
+
+                    if (foundCredentials.length > 0) {
+                        foundCredentials.forEach(cred => {
+                            displayMessage(`
+                            <strong>Tipo:</strong> ${cred.type} <br>
+                            <strong>Identificador:</strong> ${cred.identifier} <br>
+                            <strong>Senha:</strong> ${cred.password} <br>
+                            <strong>URL:</strong> <a href="https://${cred.url}" target="_blank">${cred.url}</a>
+                        `, "received");
+                        });
+                    } else {
+                        displayMessage(`Nenhum dado comprometido encontrado para "${identifier}".`, "received");
+                    }
+                })
+                .catch(error => {
+                    loader.remove(); // Remover o loader em caso de erro
+                    displayMessage("Erro ao carregar os dados. Tente novamente.", "received");
+                    console.error("Erro:", error);
+                });
+        }, 3000); // Simulação de um atraso de 2 segundos
+    }
+
+    function displayMessage(message, type) {
+        const chatMessages = document.getElementById("chatMessages");
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.innerHTML = message;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight; // Rolagem automática para o final
+    }
+
+</script>
+
+</html>
